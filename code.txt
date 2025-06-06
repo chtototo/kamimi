@@ -1,0 +1,199 @@
+#include <QApplication>
+#include <QWidget>
+#include <QPushButton>
+#include <QFileDialog>
+#include <QLineEdit>
+#include <QLabel>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QMessageBox>
+#include <QFile>
+#include <QByteArray>
+#include <QFont>
+#include <QTextEdit>
+#include <QFrame>
+
+QByteArray xorCipher(QByteArray data, const QByteArray &key) {
+    for (int i = 0; i < data.size(); ++i) {
+        data[i] ^= key[i % key.size()];
+    }
+    return data;
+}
+
+bool writeFile(const QString &filePath, const QByteArray &data) {
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly)) return false;
+    file.write(data);
+    file.close();
+    return true;
+}
+
+int main(int argc, char *argv[]) {
+    QApplication app(argc, argv);
+
+    QWidget window;
+    window.setWindowTitle("XOR Cipher");
+    window.setFixedSize(1200, 600);
+
+    // Шрифты
+    QFont titleFont("Segoe UI", 24, QFont::Bold);
+    QFont labelFont("Segoe UI", 10);
+
+    // Заголовок
+    QLabel *titleLabel = new QLabel("XOR Cipher");
+    titleLabel->setFont(titleFont);
+    titleLabel->setAlignment(Qt::AlignCenter);
+
+    // Поля и кнопки
+    QLineEdit *fileEdit = new QLineEdit;
+    QPushButton *fileBtn = new QPushButton("📁");
+
+    QLineEdit *keyEdit = new QLineEdit;
+    QPushButton *keyBtn = new QPushButton("📁");
+
+    QLineEdit *outEdit = new QLineEdit;
+    QPushButton *outBtn = new QPushButton("📁");
+
+    QPushButton *startBtn = new QPushButton("🔐 Encrypt / Decrypt");
+
+    // Стили
+    fileEdit->setPlaceholderText("Select file...");
+    keyEdit->setPlaceholderText("Select key file...");
+    outEdit->setPlaceholderText("Select output file...");
+
+    fileEdit->setReadOnly(true);
+    keyEdit->setReadOnly(true);
+    outEdit->setReadOnly(true);
+
+    fileEdit->setMinimumHeight(30);
+    keyEdit->setMinimumHeight(30);
+    outEdit->setMinimumHeight(30);
+    fileBtn->setFixedWidth(40);
+    keyBtn->setFixedWidth(40);
+    outBtn->setFixedWidth(40);
+    startBtn->setMinimumHeight(40);
+
+    // Области для отображения содержимого файлов
+    QTextEdit *fileContent = new QTextEdit;
+    QTextEdit *keyContent = new QTextEdit;
+    QTextEdit *outContent = new QTextEdit;
+
+    fileContent->setReadOnly(true);
+    keyContent->setReadOnly(true);
+    outContent->setReadOnly(true);
+
+    fileContent->setFrameShape(QFrame::Box);
+    keyContent->setFrameShape(QFrame::Box);
+    outContent->setFrameShape(QFrame::Box);
+
+    fileContent->setMinimumHeight(80);
+    keyContent->setMinimumHeight(80);
+    outContent->setMinimumHeight(80);
+
+    // Основной макет: слева — ввод, справа — содержимое
+    QHBoxLayout *mainLayout = new QHBoxLayout(&window);
+
+    // Левая часть — поля выбора файлов
+    QVBoxLayout *leftLayout = new QVBoxLayout;
+    leftLayout->addWidget(titleLabel);
+    leftLayout->addSpacing(15);
+
+    auto addFileRow = [&](QLineEdit *edit, QPushButton *btn) {
+        QHBoxLayout *row = new QHBoxLayout;
+        row->addWidget(edit);
+        row->addWidget(btn);
+        leftLayout->addLayout(row);
+        leftLayout->addSpacing(10);
+    };
+
+    addFileRow(fileEdit, fileBtn);
+    addFileRow(keyEdit, keyBtn);
+    addFileRow(outEdit, outBtn);
+    leftLayout->addSpacing(10);
+    leftLayout->addWidget(startBtn);
+
+    // Правая часть — содержимое файлов
+    QVBoxLayout *rightLayout = new QVBoxLayout;
+    rightLayout->addWidget(new QLabel("File Content:"));
+    rightLayout->addWidget(fileContent);
+    rightLayout->addWidget(new QLabel("Key Content:"));
+    rightLayout->addWidget(keyContent);
+    rightLayout->addWidget(new QLabel("Output Content:"));
+    rightLayout->addWidget(outContent);
+
+    mainLayout->addLayout(leftLayout, 1);
+    mainLayout->addLayout(rightLayout, 2);
+
+    // Переменные
+    QString filePath, keyPath, outPath;
+
+    // Обработчики
+    QObject::connect(fileBtn, &QPushButton::clicked, [&]() {
+        filePath = QFileDialog::getOpenFileName(nullptr, "Select File");
+        if (!filePath.isEmpty()) {
+            fileEdit->setText(filePath);
+            QFile file(filePath);
+            if (file.open(QIODevice::ReadOnly)) {
+                fileContent->setText(file.readAll());
+                file.close();
+            }
+        }
+    });
+
+    QObject::connect(keyBtn, &QPushButton::clicked, [&]() {
+        keyPath = QFileDialog::getOpenFileName(nullptr, "Select Key File");
+        if (!keyPath.isEmpty()) {
+            keyEdit->setText(keyPath);
+            QFile file(keyPath);
+            if (file.open(QIODevice::ReadOnly)) {
+                keyContent->setText(file.readAll());
+                file.close();
+            }
+        }
+    });
+
+    QObject::connect(outBtn, &QPushButton::clicked, [&]() {
+        outPath = QFileDialog::getSaveFileName(nullptr, "Select Output File");
+        if (!outPath.isEmpty()) {
+            outEdit->setText(outPath);
+            QFile file(outPath);
+            if (file.open(QIODevice::ReadOnly)) {
+                outContent->setText(file.readAll());
+                file.close();
+            } else {
+                outContent->clear();
+            }
+        }
+    });
+
+    QObject::connect(startBtn, &QPushButton::clicked, [&]() {
+        if (filePath.isEmpty() || keyPath.isEmpty() || outPath.isEmpty()) {
+            QMessageBox::warning(nullptr, "Missing info", "Please select all files.");
+            return;
+        }
+
+        QFile inputFile(filePath), keyFile(keyPath);
+        if (!inputFile.open(QIODevice::ReadOnly) || !keyFile.open(QIODevice::ReadOnly)) {
+            QMessageBox::critical(nullptr, "Error", "Could not open files.");
+            return;
+        }
+
+        QByteArray inputData = inputFile.readAll();
+        QByteArray keyData = keyFile.readAll();
+        inputFile.close();
+        keyFile.close();
+
+        QByteArray result = xorCipher(inputData, keyData);
+
+        if (writeFile(outPath, result)) {
+            outContent->setText(result);
+            QMessageBox::information(nullptr, "Done", "Encryption complete.");
+        } else {
+            QMessageBox::critical(nullptr, "Error", "Failed to save output file.");
+        }
+    });
+
+    window.show();
+    return app.exec();
+}
+
