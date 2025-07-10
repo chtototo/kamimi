@@ -35,6 +35,9 @@ int main(int argc, char *argv[]) {
     QWidget window;
     window.setWindowTitle("XOR Cipher");
     window.setFixedSize(1200, 600);
+    // window.setStyleSheet(R"(QPushButton {
+    //     background-color: #ffffff;
+    // })");
 
     QFont titleFont("Segoe UI", 24, QFont::Bold);
     QFont labelFont("Segoe UI", 10);
@@ -45,6 +48,7 @@ int main(int argc, char *argv[]) {
 
     QLineEdit *fileEdit = new QLineEdit;
     QPushButton *fileBtn = new QPushButton("📁");
+    // fileBtn->setStyleSheet("height: 100px");
 
     QLineEdit *keyEdit = new QLineEdit;
     QPushButton *keyBtn = new QPushButton("📁");
